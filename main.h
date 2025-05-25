@@ -29,5 +29,6 @@ void printHex(LPCBYTE pbData, DWORD cbData);
 void dump_response_buffer(BYTE *pbRecvBuffer);
 void resetBuffer256(BYTE *buffer);
 void resetBuffer2048(BYTE *buffer);
+BOOL is_byte_in_array(BYTE value, const BYTE *array, size_t size);
 
 #endif

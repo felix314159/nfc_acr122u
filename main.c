@@ -66,8 +66,13 @@
 
 #include "main.h"
 #include "mifare-classic.h"
+#include "ndef.h"
+#include "ntag-215.h"
+
 #include "logging.c"
 
+
+// -------------------- Functions that interact with reader -------------------------------
 
 LONG getAvailableReaders(SCARDCONTEXT hContext, char *mszReaders, DWORD *dwReaders) {
     LONG lRet = SCardListReaders(hContext, NULL, mszReaders, dwReaders);
@@ -122,7 +127,7 @@ ApduResponse executeApdu(SCARDHANDLE hCard, BYTE *pbSendBuffer, DWORD dwSendLeng
     }
 
     LOG_DEBUG("Response status: %lu (0 means success)\n", lRet);
-    LOG_DEBUG("Response size: %u bytes\n", *pbRecvBufferSize); // linux wants %lu, macos wants %u. just use either and ignore warning lul
+    LOG_DEBUG("Response size: %lu bytes\n", *pbRecvBufferSize); // linux wants %lu, macos wants %u. just use either and ignore warning lul
     
     // return both status and length of response
     // ApduResponse response;
@@ -161,7 +166,7 @@ void disconnectReader(SCARDHANDLE hCard, SCARDCONTEXT hContext) {
     SCardReleaseContext(hContext);
 }
 
-// -------------------- General Functions that interact with various tags ----------------------------------
+// -------------------- General Functions that interact with various tags -------------------------------
 
 LONG getUID(SCARDHANDLE hCard, BYTE *pbRecvBuffer, DWORD *pbRecvBufferSize, BOOL printResult) {
     LOG_INFO("Will now try to determine UID");
@@ -275,8 +280,8 @@ LONG getStatus(SCARDHANDLE *hCard, char *mszReaders, DWORD dwState, DWORD dwRead
     return lRet;
 }
 
-
 // -------------------- Helper functions -------------------------------------------------------
+
 BOOL containsSubstring(const char *string, const char *substring) {
     // Edge case: if substring is empty, it's always considered a match
     if (*substring == '\0') {
@@ -339,6 +344,18 @@ void resetBuffer2048(BYTE *buffer) {
     LOG_DEBUG("Response buffer has been reset to all zeroes");
 }
 
+// is_byte_in_array is a helper function to check whether passed byte value is an element in the array 'array' of size 'size'
+// C feels really old here, not being able to get size of array that has static size because it decays to a pointer in this function is kinda cringe no cap
+BOOL is_byte_in_array(BYTE value, const BYTE *array, size_t size) {
+    for (size_t i = 0; i < size; i++) {
+        if (array[i] == value) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+
 // -------------------------------------------------------
 
 int main(void) {
@@ -348,7 +365,7 @@ int main(void) {
     char mszReaders[1024];
     DWORD dwReaders = sizeof(mszReaders);
 
-    BYTE pbRecvBuffer[256] = {0};
+    BYTE pbRecvBuffer[256] = {0}; // PN532 can only transfer 256 bytes at once (page 29 of PN532 application note)
     DWORD pbRecvBufferSize = sizeof(pbRecvBuffer);
 
     BYTE pbRecvBufferLarge[2048] = {0};
@@ -466,8 +483,7 @@ int main(void) {
         }
     }
     
-    // -------------------------------------------------------------
-    // lots of examples below
+    // ----------- Mifare Classic 1k Examples ------------------------
 
     // READING EXAMPLES
         // example 1:   mifare_classic_read_sector(0x02, KEY_A_DEFAULT, hCard, pbRecvBuffer, &pbRecvBufferSize);
@@ -509,7 +525,41 @@ int main(void) {
 
     // TODO: why can't getStatus() distinguish between Ultralight and NTAG?
 
-    // ---------------------------------------------------------
+    // ------------------------- NTAG-215 EXAMPLES ------------------------
+    //  WRITE TO PAGE:
+    //      BYTE Msg[4] = { 0x05, 0x04, 0x03, 0x04 };
+    //      BOOL success = ntag_215_write_page(Msg, 0x29, hCard, pbRecvBuffer, &pbRecvBufferSize);
+    //  RESET USER MEMORY TO ZEROES:
+    //      BOOL success = ntag_215_reset_user_data(hCard, pbRecvBuffer, &pbRecvBufferSize);
+
+    //  READ FROM PAGE start TO PAGE end (here: read entire tag at once)
+    //BOOL success = ntag_215_fast_read(0x00, 0x86, hCard, pbRecvBuffer, &pbRecvBufferSize);
+
+    // -------------------- NDEF SR Text creation EXAMPLE ----------------
+    // const char* my_text = "hello world!";
+    // BYTE text_len = (BYTE)strlen(my_text);
+    // size_t total_size;
+
+    // BYTE* encoded = NewNDEF_SR_Text((const BYTE*)my_text, text_len, &total_size);
+    // if (encoded == NULL) {
+    //     return 1;
+    // }
+
+    // // create a multidimensional array with 4-byte rows
+    // size_t num_blocks = total_size / 4;
+    // BYTE output[num_blocks][4];
+    // memcpy(output, encoded, total_size);
+    // free(encoded);
+
+    // // print result
+    // printf("Encoded NDEF message (%zu bytes, %zu blocks of 4 bytes):\n", total_size, num_blocks);
+    // for (size_t i = 0; i < num_blocks; i++) {
+    //     printf("Block %2zu: %02X %02X %02X %02X\n", i, output[i][0], output[i][1], output[i][2], output[i][3]);
+    // }
+
+    // -------------------- Mifare Ultralight EXAMPLE ----------------
+    // TODO
+    // ---------------------------------------------------------------
 
     // Clean up
     disconnectReader(hCard, hContext);

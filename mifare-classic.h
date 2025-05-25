@@ -14,7 +14,7 @@
 #endif
 
 // SectorContent is a struct that holds the sectorID (0x00, 0x01, etc.), the content of each of the three blocks in the sector, and a status bool (success /failure) 
-typedef struct {
+typedef struct SectorContent {
     BYTE sectorID;
     BYTE Block_0[16];
     BYTE Block_1[16];
@@ -27,7 +27,6 @@ BOOL mifare_classic_ndef_to_uninitialized(SCARDHANDLE hCard, BYTE *pbRecvBuffer,
 BOOL mifare_classic_uninitialized_to_ndef(SCARDHANDLE hCard, BYTE *pbRecvBuffer, DWORD *pbRecvBufferSize);
 BOOL mifare_classic_reset_card(const BYTE *keyA, SCARDHANDLE hCard, BYTE *pbRecvBuffer, DWORD *pbRecvBufferSize);
 BOOL mifare_classic_write_block(const BYTE *BlockData, BYTE block, const BYTE *keyA, SCARDHANDLE hCard, BYTE *pbRecvBuffer, DWORD *pbRecvBufferSize);
-BOOL is_byte_in_array(BYTE value, const BYTE *array, size_t size);
 
 extern const BYTE NDEF_SECTOR_TRAILER_0[16];
 extern const BYTE NDEF_SECTOR_TRAILER_115[16];

@@ -52,18 +52,6 @@ const BYTE NDEF_Block2[16] = { 0x03, 0xE1, 0x03, 0xE1, 0x03, 0xE1, 0x03, 0xE1, 0
 const BYTE NDEF_Block4[16] = { 0x03, 0x00, 0xFE, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
 
-// is_byte_in_array is a helper function to check whether passed byte value is an element in the array 'array' of size 'size'
-// C feels really old here, not being able to get size of array that has static size because it decays to a pointer in this function is kinda cringe no cap
-BOOL is_byte_in_array(BYTE value, const BYTE *array, size_t size) {
-    for (size_t i = 0; i < size; i++) {
-        if (array[i] == value) {
-            return TRUE;
-        }
-    }
-    return FALSE;
-}
-
-
 // mifare_classic_read_sector reads an entire sector and prints it
 // currently only supports mifare classic 1k
 SectorContent mifare_classic_read_sector(BYTE sectorId, const BYTE *keyA, SCARDHANDLE hCard, BYTE *pbRecvBuffer, DWORD *pbRecvBufferSize) {
