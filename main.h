@@ -27,6 +27,7 @@ LONG getStatus(SCARDHANDLE *hCard, char *mszReaders, DWORD dwState, DWORD dwRead
 BOOL containsSubstring(const char *string, const char *substring);
 void printHex(LPCBYTE pbData, DWORD cbData);
 void dump_response_buffer(BYTE *pbRecvBuffer);
+void dump_response_buffer_256(BYTE *pbRecvBuffer);
 void resetBuffer256(BYTE *buffer);
 void resetBuffer2048(BYTE *buffer);
 BOOL is_byte_in_array(BYTE value, const BYTE *array, size_t size);

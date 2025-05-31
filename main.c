@@ -68,6 +68,7 @@
 #include "mifare-classic.h"
 #include "ndef.h"
 #include "ntag-215.h"
+#include "mifare-ultralight.h"
 
 #include "logging.c"
 
@@ -332,6 +333,21 @@ void dump_response_buffer(BYTE *pbRecvBuffer) {
     printf("\n\n");
 }
 
+// dump_response_buffer_256 prints the first 256 values contained in the array. line-breaks after every 4 bytes.
+void dump_response_buffer_256(BYTE *pbRecvBuffer) {
+    printf("\nDumping first 256 values in response buffer:\n");
+    for (int i = 0; i < 256; i++) {
+        printf("0x%02x", pbRecvBuffer[i]);
+        if ((i+1) % 4 == 0) { // +1 so that it doesnt line-break for i=0
+            printf("\n");
+        }
+        else {
+            printf("  ");
+        }
+    }
+    printf("\n\n");
+}
+
 // resetBuffer256 is used to reset the reply buffer to all zeroes, e.g. resetBuffer(pbRecvBuffer);
 void resetBuffer256(BYTE *buffer) {
     memset(buffer, 0, 256);
@@ -557,8 +573,31 @@ int main(void) {
     //     printf("Block %2zu: %02X %02X %02X %02X\n", i, output[i][0], output[i][1], output[i][2], output[i][3]);
     // }
 
-    // -------------------- Mifare Ultralight EXAMPLE ----------------
-    // TODO
+    // -------------------- Mifare Ultralight EXAMPLES ---------------
+    // READ PAGE (here: page 0x06)
+    //      ultralight_read_page(0x12, hCard, pbRecvBuffer, &pbRecvBufferSize);
+    // FAST READ ENTIRE TAG
+    //      ultralight_fast_read(hCard, pbRecvBuffer, &pbRecvBufferSize);
+    // WRITE TO PAGE
+    //      BYTE Msg[4] = { 0x05, 0x04, 0x03, 0x04 };
+    //      ultralight_write_page(Msg, 0x05, hCard, pbRecvBuffer, &pbRecvBufferSize);
+    // RESET USER-MEMORY
+    //      ultralight_reset_user_data(hCard, pbRecvBuffer, &pbRecvBufferSize);
+    // READ COUNTER
+    //   Counter 0:
+    //      ultralight_read_counter(0x00, hCard, pbRecvBuffer, &pbRecvBufferSize);
+    //   Counter 1:
+    //      ultralight_read_counter(0x01, hCard, pbRecvBuffer, &pbRecvBufferSize);
+    //   Counter 2:
+    //      ultralight_read_counter(0x02, hCard, pbRecvBuffer, &pbRecvBufferSize);
+    // INCREMENT COUNTER BY 1 (i could also implement increment by x <= 16_777_215 at some point)
+    //  Counter 0:
+    //      ultralight_increment_counter(0x00, hCard, pbRecvBuffer, &pbRecvBufferSize);
+    //  Counter 1:
+    //      ultralight_increment_counter(0x01, hCard, pbRecvBuffer, &pbRecvBufferSize);
+    //  Counter 2:
+    //      ultralight_increment_counter(0x02, hCard, pbRecvBuffer, &pbRecvBufferSize);
+    
     // ---------------------------------------------------------------
 
     // Clean up

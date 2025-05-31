@@ -38,7 +38,7 @@ BOOL ntag_215_write_page(BYTE* data, BYTE page, SCARDHANDLE hCard, BYTE *pbRecvB
         return FALSE;
     }
 
-    // ff 00 00 00 08 (communicate with pn532 and 8 byte command will follow)
+    // ff 00 00 00 08 (communicate with pn532 and 8 byte (4 byte command and 4 byte data) command will follow)
     //      d4 (data exchange command)
     //      42 (InCommunicateThru)
     //      a2 (Write) [page 41 of ntag21x document]
