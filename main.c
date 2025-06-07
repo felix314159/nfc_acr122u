@@ -65,9 +65,12 @@
     // You can verify that it works via 'sudo apt install clangd' followed by 'clangd --check=main.c'
 
 #include "main.h"
-#include "mifare-classic.h"
+#include "mifare-classic-1k.h"
+#include "mifare-classic-4k.h"
 #include "ndef.h"
+#include "ntag-216.h"
 #include "ntag-215.h"
+#include "ntag-213.h"
 #include "mifare-ultralight.h"
 
 #include "logging.c"
@@ -204,8 +207,8 @@ LONG getUID(SCARDHANDLE hCard, BYTE *pbRecvBuffer, DWORD *pbRecvBufferSize, BOOL
     return response.status;
 }
 
-// getATS_14443A sends a RATS (Request for Answer To Select) to the tag (afaik only stuff like desfire, smartMX and some java cards even support this)
-ApduResponse getATS_14443A(SCARDHANDLE hCard, BYTE *pbRecvBuffer, DWORD *pbRecvBufferSize) {
+// getATS_14443A sends a RATS (Request for Answer To Select) to the tag (afaik only stuff like desfire, ntag 424 dna, smartMX and some java cards even support this)
+ApduResponse getATS_14443A(SCARDHANDLE hCard, BYTE *pbRecvBuffer, DWORD *pbRecvBufferSize, char *tagName) {
     LOG_INFO("Will now try to determine ATS");
     BYTE pbSendBuffer[] = { 0xFF, 0xCA, 0x01, 0x00, 0x00 };
     ApduResponse response = executeApdu(hCard, pbSendBuffer, sizeof(pbSendBuffer), pbRecvBuffer, pbRecvBufferSize);
@@ -214,9 +217,18 @@ ApduResponse getATS_14443A(SCARDHANDLE hCard, BYTE *pbRecvBuffer, DWORD *pbRecvB
         LOG_WARN("Accessing ATS of this tag type is currently not supported by this program\n");
     }
 
-    // KNOWN RESPONSES:
-    //      06 75 77 81 02 80: Mifare desfire 8k
-    //      06 77 77 71 02 80: Ntag 424 dna tt
+    // identify Mifare Desfire EV3 8k
+    if ((pbRecvBuffer[0] == 0x06) && (pbRecvBuffer[1] == 0x75) && (pbRecvBuffer[2] == 0x77) && (pbRecvBuffer[3] == 0x81) && (pbRecvBuffer[4] == 0x02) && (pbRecvBuffer[5] == 0x80)) {
+        LOG_INFO("I now know for sure that your tag is: Desfire EV3");
+        // update stored tag name
+        strncpy(tagName, "Mifare Desfire EV3 8k", 99); // i dont own enough tags to tell whether that decides just desfire, or desfire ev3, or desfire ev3 8k
+    } 
+    // identify NTAG 424 DNA TT
+    else if ((pbRecvBuffer[0] == 0x06) && (pbRecvBuffer[1] == 0x77) && (pbRecvBuffer[2] == 0x77) && (pbRecvBuffer[3] == 0x71) && (pbRecvBuffer[4] == 0x02) && (pbRecvBuffer[5] == 0x80)) {
+        LOG_INFO("I now know for sure that your tag is: NTAG DNA 424 DNA");
+        // update stored tag name
+        strncpy(tagName, "NTAG 424 DNA TT", 99);
+    }
 
     printf("\n");
     return response;
@@ -264,8 +276,8 @@ LONG getStatus(SCARDHANDLE *hCard, char *mszReaders, DWORD dwState, DWORD dwRead
             printf("Identified tag as: FeliCa 424K\n");
             strncpy(tagName, "FeliCa 424K", 99);
         } else if ((pbRecvBuffer[0] == 0x3B) && (pbRecvBuffer[1] == 0x81) && (pbRecvBuffer[2] == 0x80) && (pbRecvBuffer[3] == 0x01) ) {
-            printf("Identified tag as: Mifare Desfire 8k\n");
-            strncpy(tagName, "Mifare Desfire 8k", 99); // page 10 of API-ACR122U-2.04
+            printf("Identified tag as: Mifare Desfire EV3 8k or NTAG 424 DNA TT\n");
+            strncpy(tagName, "Mifare Desfire EV3 8k or NTAG 424 DNA TT", 99); // page 10 of API-ACR122U-2.04
         } else if (pbRecvBuffer[13] == 0xFF) {
             LOG_WARN("Identified tag as: UNKNOWN TAG\n");
             strncpy(tagName, "UNKNOWN TAG", 99);
@@ -489,14 +501,18 @@ int main(void) {
     }
     // printf("%s", connectedTag);
 
-    // only try to get RATS if currently connected tag is DESFIRE 8k (only desfire i have)
-    if (strcmp(connectedTag, "Mifare Desfire 8k") == 0) {
-        ApduResponse response = getATS_14443A(hCard, pbRecvBuffer, &pbRecvBufferSize);
+    // only try to get RATS if currently connected tag is DESFIRE 8k (only desfire i have) or NTAG 424 DNA TT
+    //      strcmp only reads (and compares) up to the \n terminator, so it doesn't matter what is in rest of array
+    if (strcmp(connectedTag, "Mifare Desfire EV3 8k or NTAG 424 DNA TT") == 0) {
+        ApduResponse response = getATS_14443A(hCard, pbRecvBuffer, &pbRecvBufferSize, connectedTag);
         if (response.status != SCARD_S_SUCCESS) {
             LOG_WARN("Failed to get ATS of tag: 0x%x\n", (unsigned int)lRet);
             disconnectReader(hCard, hContext);
             return 1;
         }
+
+        // it should now be decided which tag we are working with
+        //printf("%s", connectedTag);
     }
     
     // ----------- Mifare Classic 1k Examples ------------------------
@@ -538,8 +554,6 @@ int main(void) {
 
     // UNINTITIALIZED TO NDEF EXAMPLE
     //      mifare_classic_uninitialized_to_ndef(hCard, pbRecvBuffer, &pbRecvBufferSize);
-
-    // TODO: why can't getStatus() distinguish between Ultralight and NTAG?
 
     // ------------------------- NTAG-215 EXAMPLES ------------------------
     //  WRITE TO PAGE:
@@ -598,7 +612,54 @@ int main(void) {
     //  Counter 2:
     //      ultralight_increment_counter(0x02, hCard, pbRecvBuffer, &pbRecvBufferSize);
     
-    // ---------------------------------------------------------------
+    // ----------- Mifare Classic 4k Examples ------------------------
+    //  READ SECTOR
+    //      mifare_classic_4k_read_sector(0x01, KEY_A_DEFAULT_4K, hCard, pbRecvBuffer, &pbRecvBufferSize);
+    //  WRITE BLOCK
+    //      const BYTE BlockData[16] = { 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F };
+    //      mifare_classic_4k_write_block(BlockData, 0x04, KEY_A_DEFAULT_4K, hCard, pbRecvBuffer, &pbRecvBufferSize);
+    //  RESET CARD
+    //      Example 1: tag is NDEF formatted:
+    //          mifare_classic_4k_reset_card(KEY_A_NDEF_SECTOR_1_TO_0F_AND_11_TO_27_4K, hCard, pbRecvBuffer, &pbRecvBufferSize);
+    //      Example 2: tag is NDEF uninitialized but u want to reset all blocks to zero:
+    //          mifare_classic_4k_reset_card(KEY_A_DEFAULT, hCard, pbRecvBuffer, &pbRecvBufferSize);
+    //  SPAM UNINITIALIZED TAG WITH DATA (good for testing the zero wipe functions)
+    //      for (BYTE i = 0x01; i < 0xFF; i++) {
+    //          if(is_byte_in_array(i, SECTOR_TRAILER_BLOCKS_4K, 40)) continue; // skip trailer blocks
+
+    //          BYTE BlockData[16];
+    //          memset(BlockData, i, sizeof(BlockData)); // array is full of i (in block x write value x 16 times)
+
+    //          BOOL success = mifare_classic_4k_write_block(BlockData, i, KEY_A_DEFAULT, hCard, pbRecvBuffer, &pbRecvBufferSize);
+    //          if (!success) return 1;
+    //      }
+
+    //  UNINITIALIZED TO NDEF-FORMATTED:
+    //          mifare_classic_4k_uninitialized_to_ndef(hCard, pbRecvBuffer, &pbRecvBufferSize);
+    //  NDEF-FORMATTED TO UNINITIALIZED:
+    //          mifare_classic_4k_ndef_to_uninitialized(hCard, pbRecvBuffer, &pbRecvBufferSize);
+
+    // ---------------------------- NTAG 213 EXAMPLES -------------------
+    //  WRITE TO PAGE:
+    //      BYTE Msg[4] = { 0x05, 0x04, 0x03, 0x04 };
+    //      ntag_213_write_page(Msg, 0x14, hCard, pbRecvBuffer, &pbRecvBufferSize);
+    //  RESET USER MEMORY TO ZEROES:
+    //      ntag_213_reset_user_data(hCard, pbRecvBuffer, &pbRecvBufferSize);
+    //  READ FROM PAGE start TO PAGE end (here: read entire tag at once)
+    //      ntag_213_fast_read(0x00, 0x2C, hCard, pbRecvBuffer, &pbRecvBufferSize);
+
+    // ---------------------------- NTAG 216 EXAMPLES -------------------
+    //  WRITE TO PAGE:
+    //      BYTE Msg[4] = { 0x05, 0x04, 0x03, 0x04 };
+    //      ntag_216_write_page(Msg, 0x14, hCard, pbRecvBuffer, &pbRecvBufferSize);
+    //  RESET USER MEMORY TO ZEROES:
+    //      ntag_216_reset_user_data(hCard, pbRecvBuffer, &pbRecvBufferSize);
+    //  READ FROM PAGE start TO PAGE end (here: read entire tag at once)
+    //      ntag_216_fast_read(0x00, 0xE6, hCard, pbRecvBuffer, &pbRecvBufferSize);
+
+    // ------------------------------------------------------------------
+
+    // TODO: why can't getStatus() distinguish between Ultralight and NTAG? and then also be able to distinguish ntag 2xx variants
 
     // Clean up
     disconnectReader(hCard, hContext);

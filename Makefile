@@ -14,7 +14,7 @@ else ifeq ($(UNAME_S),Darwin)
 endif
 
 # Source files and output
-SRC = main.c mifare-classic.c ntag-215.c ndef.c mifare-ultralight.c
+SRC = main.c mifare-classic-1k.c mifare-classic-4k.c ntag-216.c ntag-215.c ntag-213.c ndef.c mifare-ultralight.c
 OBJ = $(SRC:.c=.o)
 TARGET = main
 

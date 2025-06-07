@@ -1,5 +1,5 @@
-#ifndef MIFARE_CLASSIC_H
-#define MIFARE_CLASSIC_H
+#ifndef MIFARE_CLASSIC_1K_H
+#define MIFARE_CLASSIC_1K_H
 
 #ifndef MAIN_H
 #include "main.h"
@@ -13,12 +13,10 @@
 #include "logging.c"
 #endif
 
-// SectorContent is a struct that holds the sectorID (0x00, 0x01, etc.), the content of each of the three blocks in the sector, and a status bool (success /failure) 
+// SectorContent is a struct that holds the sectorID (0x00, 0x01, etc.), the content of each of the three data blocks in the sector, and a status bool (success /failure) 
 typedef struct SectorContent {
     BYTE sectorID;
-    BYTE Block_0[16];
-    BYTE Block_1[16];
-    BYTE Block_2[16];
+    BYTE blocks[3][16];  // 3 blocks, each of which holds 16 bytes
     LONG status;
 } SectorContent;
 
@@ -33,20 +31,20 @@ extern const BYTE NDEF_SECTOR_TRAILER_115[16];
 
 extern const BYTE UNINITIALIZED_SECTOR_TRAILER[16];
 
-extern const BYTE SECTOR_BLOCKS[16];
-extern const BYTE SECTOR_IDS[16];
+extern const BYTE SECTOR_BLOCKS_1K[16];
+extern const BYTE SECTOR_IDS_1K[16];
 
 extern const BYTE KEY_A_DEFAULT[6];
 extern const BYTE KEY_B_DEFAULT[6];
 
-extern const BYTE KEY_A_NDEF_SECTOR0[6];
-extern const BYTE KEY_B_NDEF_SECTOR0[6];
-extern const BYTE KEY_A_NDEF_SECTOR115[6];
-extern const BYTE KEY_B_NDEF_SECTOR115[6];
+extern const BYTE KEY_A_NDEF_SECTOR_0[6];
+extern const BYTE KEY_B_NDEF_SECTOR_0[6];
+extern const BYTE KEY_A_NDEF_SECTOR_AFTER_0[6];
+extern const BYTE KEY_B_NDEF_SECTOR_AFTER_0[6];
 
 extern const BYTE ACCESS_BITS_UNINITALIZED[4];
-extern const BYTE ACCESS_BITS_NDEF_SECTOR0[4];
-extern const BYTE ACCESS_BITS_NDEF_SECTOR115[4];
+extern const BYTE ACCESS_BITS_NDEF_SECTOR_0[4];
+extern const BYTE ACCESS_BITS_NDEF_SECTOR_AFTER_0[4];
 
 extern const BYTE NDEF_Block1[16];
 extern const BYTE NDEF_Block2[16];

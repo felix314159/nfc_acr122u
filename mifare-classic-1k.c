@@ -1,4 +1,4 @@
-#include "mifare-classic.h"
+#include "mifare-classic-1k.h"
 #include "logging.c"
 #include "main.h"
 
@@ -18,11 +18,11 @@ const BYTE UNINITIALIZED_SECTOR_TRAILER[16] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x
 												0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };	// key B
 
 // SECTOR TRAILER INDICES (blocks 0,1,2 in each sector contain data, block 3 holds key config. exception: in sector 0 block 0 is not usable)
-const BYTE SECTOR_BLOCKS[16] 			= { 0x03, 0x07, 0x0B, 0x0F, 0x13, 0x17, 0x1B, 0x1F,
-											0x23, 0x27, 0x2B, 0x2F, 0x33, 0x37, 0x3B, 0x3F };
+const BYTE SECTOR_BLOCKS_1K[16] 			= { 0x03, 0x07, 0x0B, 0x0F, 0x13, 0x17, 0x1B, 0x1F,
+											    0x23, 0x27, 0x2B, 0x2F, 0x33, 0x37, 0x3B, 0x3F };
 // SECTOR IDs (e.g. sector 0 holds blocks 0,1,2,3 and sector 5 holds blocks 0x17-3, 0x17-2,0x17-1 and 0x17)
-const BYTE SECTOR_IDS[16] 				= { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-											0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F };
+const BYTE SECTOR_IDS_1K[16] 				= { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+											    0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F };
 
 // KEYS
 //		uninitialized default keys
@@ -30,17 +30,17 @@ const BYTE KEY_A_DEFAULT[6] 			= { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 const BYTE KEY_B_DEFAULT[6] 			= { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 
 //		ndef-formatted default keys
-const BYTE KEY_A_NDEF_SECTOR0[6] 		= { 0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5 };
-const BYTE KEY_B_NDEF_SECTOR0[6] 		= { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+const BYTE KEY_A_NDEF_SECTOR_0[6] 		= { 0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5 };
+const BYTE KEY_B_NDEF_SECTOR_0[6] 		= { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 
-const BYTE KEY_A_NDEF_SECTOR115[6] 		= { 0xD3, 0xF7, 0xD3, 0xF7, 0xD3, 0xF7 };	// 64 33 66 37 64 33 66 37 64 33 66 37
-const BYTE KEY_B_NDEF_SECTOR115[6] 		= { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+const BYTE KEY_A_NDEF_SECTOR_AFTER_0[6] 		= { 0xD3, 0xF7, 0xD3, 0xF7, 0xD3, 0xF7 };	// 64 33 66 37 64 33 66 37 64 33 66 37
+const BYTE KEY_B_NDEF_SECTOR_AFTER_0[6] 		= { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 
 // ACCESS BITS
 //		uninitialized access bits
-const BYTE ACCESS_BITS_UNINITALIZED[4] 	=  { 0xFF, 0x07, 0x80, 0x69 };
-const BYTE ACCESS_BITS_NDEF_SECTOR0[4] 	=  { 0x78, 0x77, 0x88, 0xC1 };
-const BYTE ACCESS_BITS_NDEF_SECTOR115[4] = { 0x7F, 0x07, 0x88, 0x40 };
+const BYTE ACCESS_BITS_UNINITALIZED[4] 	=  		{ 0xFF, 0x07, 0x80, 0x69 };
+const BYTE ACCESS_BITS_NDEF_SECTOR_0[4] 	=  	{ 0x78, 0x77, 0x88, 0xC1 };
+const BYTE ACCESS_BITS_NDEF_SECTOR_AFTER_0[4] = { 0x7F, 0x07, 0x88, 0x40 };
 
 // NDEF Block 0x01
 const BYTE NDEF_Block1[16] = { 0x14, 0x01, 0x03, 0xE1, 0x03, 0xE1, 0x03, 0xE1, 0x03, 0xE1, 0x03, 0xE1, 0x03, 0xE1, 0x03, 0xE1 };
@@ -60,7 +60,7 @@ SectorContent mifare_classic_read_sector(BYTE sectorId, const BYTE *keyA, SCARDH
     sector_content.sectorID = sectorId;
 
 	// check whether passed sector is valid for mifare 4k
-	if (!is_byte_in_array(sectorId, SECTOR_IDS, 16)) {
+	if (!is_byte_in_array(sectorId, SECTOR_IDS_1K, 16)) {
 		LOG_WARN("0x%02x is not a valid sector! You are only allowed to read sectors 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E and 0x0F.", sectorId);
 		sector_content.status = FALSE;
 		return sector_content;
@@ -106,7 +106,7 @@ SectorContent mifare_classic_read_sector(BYTE sectorId, const BYTE *keyA, SCARDH
 
 		LOG_INFO("Authenticated block 0x%02x successfully", block);
 		
-		//SLEEP_CUSTOM(2000); // page 16 notes to wait 2 sec on mifare classic 2k
+		//SLEEP_CUSTOM(2000); // page 16 notes to wait 2 sec on mifare classic 4k
 
 		// read data from block that you are now allowed to access
 		BYTE APDU_Read[5] = { 0xff, 0xb0, 0x00, block, 0x10 }; // page 16 of ACR122U_APIDriverManual.pdf (reads 16 bytes, and the page number is a coincidence)
@@ -127,15 +127,7 @@ SectorContent mifare_classic_read_sector(BYTE sectorId, const BYTE *keyA, SCARDH
 		printf("\n");
 
 		// store data read from this block
-		if (i == 0) {
-			memcpy(sector_content.Block_0, pbRecvBuffer, 16);
-		}
-	    else if (i == 1) {
-	    	memcpy(sector_content.Block_1, pbRecvBuffer, 16);
-	    } 
-	    else if (i == 2) {
-	    	memcpy(sector_content.Block_2, pbRecvBuffer, 16);
-	    } 
+		memcpy(sector_content.blocks[i], pbRecvBuffer, 16);
     
 	}
 	
@@ -155,7 +147,7 @@ BOOL mifare_classic_write_block(const BYTE *BlockData, BYTE block, const BYTE *k
 	}
 
 	// warn user if he is writing to sector trailer (allowed but has consequences)
-	if (is_byte_in_array(block, SECTOR_BLOCKS, 16)) {
+	if (is_byte_in_array(block, SECTOR_BLOCKS_1K, 16)) {
 		LOG_WARN("You have chosen block 0x%02x, this is allowed but keep in mind that this is a sector trailer block.", block);
 	}
 
@@ -225,7 +217,7 @@ BOOL mifare_classic_reset_card(const BYTE *keyA, SCARDHANDLE hCard, BYTE *pbRecv
 		for (BYTE b = 0; b < 3; b++) {
 			BYTE block = s * 4 + b;
 			if (block == 0x00) continue; // block 0 is not writable
-			if (is_byte_in_array(block, SECTOR_BLOCKS, 16)) continue; // not necessary tbh
+			if (is_byte_in_array(block, SECTOR_BLOCKS_1K, 16)) continue; // not necessary tbh
 
 			
 			// only edge case: if card is ndef formatted, then sector 0 has a different key
@@ -263,7 +255,7 @@ BOOL mifare_classic_reset_card(const BYTE *keyA, SCARDHANDLE hCard, BYTE *pbRecv
 	if (is_NDEF_key) {
 		// load key for NDEF sector 0 (you HAVE to authenticate with key B it seems)
 		LOG_INFO("Loading NDEF key B for sector 0..");
-		BYTE APDU_LoadDefaultKey[11] = { 0xff, 0x82, 0x00, 0x00, 0x06, KEY_B_NDEF_SECTOR0[0], KEY_B_NDEF_SECTOR0[1], KEY_B_NDEF_SECTOR0[2], KEY_B_NDEF_SECTOR0[3], KEY_B_NDEF_SECTOR0[4], KEY_B_NDEF_SECTOR0[5] };
+		BYTE APDU_LoadDefaultKey[11] = { 0xff, 0x82, 0x00, 0x00, 0x06, KEY_B_NDEF_SECTOR_0[0], KEY_B_NDEF_SECTOR_0[1], KEY_B_NDEF_SECTOR_0[2], KEY_B_NDEF_SECTOR_0[3], KEY_B_NDEF_SECTOR_0[4], KEY_B_NDEF_SECTOR_0[5] };
 		ApduResponse response = executeApdu(hCard, APDU_LoadDefaultKey, sizeof(APDU_LoadDefaultKey), pbRecvBuffer, pbRecvBufferSize);
 		if (response.status != 0) {
 			LOG_ERROR("Failed to load provided key. Aborting..");
@@ -304,7 +296,7 @@ BOOL mifare_classic_reset_card(const BYTE *keyA, SCARDHANDLE hCard, BYTE *pbRecv
 
 BOOL mifare_classic_ndef_to_uninitialized(SCARDHANDLE hCard, BYTE *pbRecvBuffer, DWORD *pbRecvBufferSize) {
 	// first wipe all non-sectortrailer blocks to all zeroes
-	BOOL success = mifare_classic_reset_card(KEY_A_NDEF_SECTOR115, hCard, pbRecvBuffer, pbRecvBufferSize);
+	BOOL success = mifare_classic_reset_card(KEY_A_NDEF_SECTOR_AFTER_0, hCard, pbRecvBuffer, pbRecvBufferSize);
 	if (!success) {
 		LOG_ERROR("Failed to wipe NDEF-formatted tag..");
 		return FALSE;
@@ -312,7 +304,7 @@ BOOL mifare_classic_ndef_to_uninitialized(SCARDHANDLE hCard, BYTE *pbRecvBuffer,
 
 	// load provided key B
 	LOG_INFO("Loading key B..");
-	BYTE APDU_LoadDefaultKey[11] = { 0xff, 0x82, 0x00, 0x00, 0x06, KEY_B_NDEF_SECTOR115[0], KEY_B_NDEF_SECTOR115[1], KEY_B_NDEF_SECTOR115[2], KEY_B_NDEF_SECTOR115[3], KEY_B_NDEF_SECTOR115[4], KEY_B_NDEF_SECTOR115[5] }; // page 12, stores key at location 0
+	BYTE APDU_LoadDefaultKey[11] = { 0xff, 0x82, 0x00, 0x00, 0x06, KEY_B_NDEF_SECTOR_AFTER_0[0], KEY_B_NDEF_SECTOR_AFTER_0[1], KEY_B_NDEF_SECTOR_AFTER_0[2], KEY_B_NDEF_SECTOR_AFTER_0[3], KEY_B_NDEF_SECTOR_AFTER_0[4], KEY_B_NDEF_SECTOR_AFTER_0[5] }; // page 12, stores key at location 0
 	ApduResponse response = executeApdu(hCard, APDU_LoadDefaultKey, sizeof(APDU_LoadDefaultKey), pbRecvBuffer, pbRecvBufferSize);
 	if (response.status != 0) {
 		LOG_ERROR("Failed to load provided key. Aborting..");
@@ -326,7 +318,7 @@ BOOL mifare_classic_ndef_to_uninitialized(SCARDHANDLE hCard, BYTE *pbRecvBuffer,
 
 	// rewrite sector trailers (except sector 0)
 	for (BYTE b = 0; b < 16; b++) {
-		BYTE block = SECTOR_BLOCKS[b];
+		BYTE block = SECTOR_BLOCKS_1K[b];
 
 		if (block == 0x03) continue; // we will handle sector trailer 0 later
 	
@@ -362,12 +354,12 @@ BOOL mifare_classic_ndef_to_uninitialized(SCARDHANDLE hCard, BYTE *pbRecvBuffer,
 	// load key for NDEF sector 0 (you HAVE to authenticate with key B it seems)
 	LOG_INFO("Loading NDEF key B for sector 0..");
 	// replace key A that was previously used with key B
-	APDU_LoadDefaultKey[5] = KEY_B_NDEF_SECTOR0[0];
-	APDU_LoadDefaultKey[6] = KEY_B_NDEF_SECTOR0[1];
-	APDU_LoadDefaultKey[7] = KEY_B_NDEF_SECTOR0[2];
-	APDU_LoadDefaultKey[8] = KEY_B_NDEF_SECTOR0[3];
-	APDU_LoadDefaultKey[9] = KEY_B_NDEF_SECTOR0[4];
-	APDU_LoadDefaultKey[10] = KEY_B_NDEF_SECTOR0[5];
+	APDU_LoadDefaultKey[5] = KEY_B_NDEF_SECTOR_0[0];
+	APDU_LoadDefaultKey[6] = KEY_B_NDEF_SECTOR_0[1];
+	APDU_LoadDefaultKey[7] = KEY_B_NDEF_SECTOR_0[2];
+	APDU_LoadDefaultKey[8] = KEY_B_NDEF_SECTOR_0[3];
+	APDU_LoadDefaultKey[9] = KEY_B_NDEF_SECTOR_0[4];
+	APDU_LoadDefaultKey[10] = KEY_B_NDEF_SECTOR_0[5];
 
 	response = executeApdu(hCard, APDU_LoadDefaultKey, sizeof(APDU_LoadDefaultKey), pbRecvBuffer, pbRecvBufferSize);
 	if (response.status != 0) {
@@ -382,7 +374,7 @@ BOOL mifare_classic_ndef_to_uninitialized(SCARDHANDLE hCard, BYTE *pbRecvBuffer,
 	
 
 	// authenticate block 3 (sector trailer of sector 0)
-	BYTE block = SECTOR_BLOCKS[0];
+	BYTE block = SECTOR_BLOCKS_1K[0];
 	BYTE APDU_Authenticate_Block[10] = { 0xff, 0x86, 0x00, 0x00, 0x05, 0x01, 0x00, block, 0x61, 0x00 }; // 0x61 - key B, 0x60 - key A
 	response = executeApdu(hCard, APDU_Authenticate_Block, sizeof(APDU_Authenticate_Block), pbRecvBuffer, pbRecvBufferSize);
 	if (response.status != 0 || !(pbRecvBuffer[0] == 0x90 && pbRecvBuffer[1] == 0x00)) {
@@ -450,7 +442,7 @@ BOOL mifare_classic_uninitialized_to_ndef(SCARDHANDLE hCard, BYTE *pbRecvBuffer,
 
 	// rewrite sector trailers (except sector 0)
 	for (BYTE b = 0; b < 16; b++) {
-		BYTE block = SECTOR_BLOCKS[b];
+		BYTE block = SECTOR_BLOCKS_1K[b];
 
 		if (block == 0x03) continue; // handle sector 0 later
 
@@ -478,7 +470,7 @@ BOOL mifare_classic_uninitialized_to_ndef(SCARDHANDLE hCard, BYTE *pbRecvBuffer,
 	}
 
 	// authenticate block 3 (sector trailer of sector 0)
-	BYTE block = SECTOR_BLOCKS[0];
+	BYTE block = SECTOR_BLOCKS_1K[0];
 	BYTE APDU_Authenticate_Block[10] = { 0xff, 0x86, 0x00, 0x00, 0x05, 0x01, 0x00, block, 0x60, 0x00 };
 	response = executeApdu(hCard, APDU_Authenticate_Block, sizeof(APDU_Authenticate_Block), pbRecvBuffer, pbRecvBufferSize);
 	if (response.status != 0 || !(pbRecvBuffer[0] == 0x90 && pbRecvBuffer[1] == 0x00)) {

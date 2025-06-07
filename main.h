@@ -20,7 +20,7 @@ void disconnectReader(SCARDHANDLE hCard, SCARDCONTEXT hContext);
 
 // general interactions with tags
 LONG getUID(SCARDHANDLE hCard, BYTE *pbRecvBuffer, DWORD *pbRecvBufferSize, BOOL printResult);
-ApduResponse getATS_14443A(SCARDHANDLE hCard, BYTE *pbRecvBuffer, DWORD *pbRecvBufferSize);
+ApduResponse getATS_14443A(SCARDHANDLE hCard, BYTE *pbRecvBuffer, DWORD *pbRecvBufferSize, char *tagName);
 LONG getStatus(SCARDHANDLE *hCard, char *mszReaders, DWORD dwState, DWORD dwReaders, DWORD *dwActiveProtocol, BYTE *pbRecvBuffer, DWORD *pbRecvBufferSize, BOOL printResult, char *tagName);
 
 // helper functions
